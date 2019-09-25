@@ -1,0 +1,33 @@
+Bootstrap: docker
+From: centos:latest
+IncludeCmd: yes
+
+%setup
+#      cp files/container_usr_17.tgz ${SINGULARITY_ROOTFS}
+#      cp files/container_usr_19.tgz ${SINGULARITY_ROOTFS}
+#      cp files/setup17 ${SINGULARITY_ROOTFS}
+#      cp files/setup19 ${SINGULARITY_ROOTFS}
+      cp files/container_usr.tgz ${SINGULARITY_ROOTFS}
+      cp files/setup ${SINGULARITY_ROOTFS}
+
+
+%post
+      yum update -y
+      yum install epel-release -y
+      yum install -y make cmake git python-devel python-pip
+      yum install -y environment-modules tclx
+      yum install -y centos-release-scl
+      yum install -y devtoolset-7-gcc devtoolset-7-gcc-c++ automake zlib-static
+      yum install -y wget subversion perl-URI
+
+      pip install --no-cache-dir  --upgrade pip
+      pip install Jinja2
+      pip install PSyclone
+
+      mkdir -p /opt/intel
+      mkdir -p /container
+      cd /container
+      tar xvf /container_usr.tgz
+      rm /container_usr.tgz
+      cp /setup /container
+      rm -f /setup
