@@ -1,72 +1,58 @@
 The aim of the project is to:
 
-1) Put the LFRic build environment into a portable package that can be deployed
-on different x86 target machines to build the LFRic executable. 
-2) Produce an executable that is able to make use of local MPI libraries
-and therefore local fast interconnects.
-3) Produce an execuatable that be run on the native system with no run-time
-dependencies on the build environemnt to minimise the conflict between
-the packaged libraries and local libraries used for MPI and job control.
+1) Put the LFRic build environment into a portable package that can be deployed on different x86 target machines to build the LFRic executable. 
+2) Produce an executable that is able to make use of local MPI libraries and therefore local fast interconnects.
+3) Produce an executable that be run on the native system with no run-time dependencies on the build environment to minimise the conflict between the packaged libraries and local libraries used for MPI and job control.
 
-The LFRic build environment at https://code.metoffice.gov.uk/trac/lfric/wiki/LFRicTechnical/LFRicBuildEnvironment was used. As the initial purpose of
-this project was to simplify building with the Intel compiler, gfortran
-was replaced by Intel fortran throughout.
+The LFRic build environment at https://code.metoffice.gov.uk/trac/lfric/wiki/LFRicTechnical/LFRicBuildEnvironment was used. As the initial purpose of this project was to simplify building with the Intel compiler, gfortran was replaced by Intel fortran throughout.
 
-The build environment was containerised and Singularity was chosen
-container system due to its widespread use on HPCs and Tier II systems.
+The build environment was containerised and Singularity was chosen container system due to its widespread use on HPCs and Tier II systems.
 
-Pre-requisits:
+Pre-requisites:
 Intel Fortran 17 or 19 on build and run system. 
 Singularity on build and run system.
 Ability to run Singularity in sudo on build system.
-MPICH based MPI on run machine. This includeds MPICH, Intel MPI, Cray MPT
+MPICH based MPI on run machine. This includes MPICH, Intel MPI, Cray MPT
 and MVAPICH.
 
 The solution replies on the following:
 
-Locally installed software can be used from inside a containerised shell.
-The local Intel compiler can be accessed via either using bind points
-when the container shell is envoked, or by including environment-modules
-in the container, bind mounting the compiler's location and then use
-the 'module load' command to set up the compiler.
+Locally installed software can be used from inside a containerised shell. The local Intel compiler can be accessed via either using bind points when the container shell is invoked, or by including environment-modules in the container, bind mounting the compiler's location and then use the 'module load' command to set up the compiler.
 
-MPI ABI https://www.mpich.org/abi/ This provides compatibility
-between MPICH used to build the a execuatble and the local MPICH
-derivative used by the executable at run-time. Therefore it is possible
-to build the executable using one MPICH derivative, and run it using
-a different MPICH derivative.
+MPI ABI https://www.mpich.org/abi/ This provides compatibility between MPICH used to build the a execrable and the local MPICH derivative used by the executable at run-time. Therefore it is possible to build the executable using one MPICH derivative, and run it using a different MPICH derivative.
 
-Any statically compiled library will be included in the executable at
-link time.  Therefore there are no run-time dependency on these
-libraries outside the container.
+Any statically compiled library will be included in the executable at link time.  Therefore there are no run-time dependency on these libraries outside the container.
 
 
-To facilitate requirements 2) and 3) above, the following changes were made
-to the standard LFRic build environemnt.
+To facilitate requirements 2) and 3) above, the following changes were made to the standard LFRic build environment.
 
-1) gfortran replaced by Intel fortran throughout, and any necessary changes
-made to compile flags and configure option.
+1) gfortran replaced by Intel fortran throughout, and any necessary changes made to compile flags and configure option.
 2) All packages configured to produce static libraries. 
-3) The exception to 2) are the MPI libraries, which were built with
-shared libraries to use MPI ABI. 
+3) The exception to 2) are the MPI libraries, which were built with shared libraries to use MPI ABI. 
 
 
-Build environemnt containerisation workflow:
+Build environment containerisation workflow:
 
 1) Build a base build container comprising of gcc and build tools only.
-2) Start a shell inside this conatiner, mounting a bind point for the location
-of the local Intel compiler. Then build all the LFRic software dependencies
-using a common installation directory. Tar this directory.
-3) Build the final container to the tarball generated by 2) plus all python
-dependies and also environment-modules.
+2) Start a shell inside this container, mounting a bind point for the location of the local Intel compiler. Modules can also be used for this step. The top-level locations of the module configuration and Intel compiler (if different) need to be mounted as bind points. The compiler then can be used after the usual "module load" command. Then build all the LFRic software dependencies using a common installation directory.
+3) Build the LFRic dependency software stack. Tar this directory.
+4) Build the final container with the tarball generated by 3) plus all build python dependencies and also environment-modules.
 
-Note: This could be done in one step, but difficulties installing
-Intel compiler inside a containerised environment meant that a locally
-installed Intel compiler is need to build the software.
+LFRic build workflow:
 
-
+1) Copy container to target machine.
+2) Run a shell inside the container. Configure the Intel compiler as described above, again suitable bind points are required. Run the setup tool.
+3) Build LFRic as usual. The environment is pre-configured. Change the Makefile thus:
+export EXTERNAL_DYNAMIC_LIBRARIES =
 EXTERNAL_STATIC_LIBRARIES = yaxt yaxt_c xios netcdff netcdf hdf5_hl hdf5 z :libstdc++.a
 
+LFRic run workflow:
+
+1) Outside the container, set up MPICH based MPI
+2) Run LFRic as usual with mpiexec.
+
+
+Example of the dependencies of the built container inside and outside the container:
 
 Inside container:
 $ ldd gungho
@@ -89,7 +75,7 @@ $ ldd gungho
 	libsvml.so => /opt/intel/compilers_and_libraries_2017.4.196/linux/compiler/lib/intel64/libsvml.so (0x00007fbfc91de000)
 
 
-On target machine:
+On target machine using Intel MPI:
 
 $ ldd gungho
 	linux-vdso.so.1 (0x00007ffd0e98e000)
@@ -104,3 +90,5 @@ $ ldd gungho
 	libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x000014e33c125000)
 	libdl.so.2 => /usr/lib/libdl.so.2 (0x000014e33c120000)
 	librt.so.1 => /usr/lib/librt.so.1 (0x000014e33c115000)
+
+Note that there are no dependencies of the LFRic software stack, and that inside the container libmpifort.so.12 and libmpi.so.12 under /container/usr are listed as dependencies, while outside they are under /opt/intel/compilers_and_libraries_2017.4.196/linux/mpi/intel64/lib as part of Intel MPI.

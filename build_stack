@@ -112,5 +112,4 @@ make -j $NCORES
 make install
 
 cd $BASE_DIR
-tar zcvf container_usr.tgz usr
-cp container_usr.tgz $BASE_DIR/files
+tar zcvf $BASE_DIR/files/container_usr.tgz usr

@@ -3,10 +3,6 @@ From: centos:latest
 IncludeCmd: yes
 
 %setup
-#      cp files/container_usr_17.tgz ${SINGULARITY_ROOTFS}
-#      cp files/container_usr_19.tgz ${SINGULARITY_ROOTFS}
-#      cp files/setup17 ${SINGULARITY_ROOTFS}
-#      cp files/setup19 ${SINGULARITY_ROOTFS}
       cp files/container_usr.tgz ${SINGULARITY_ROOTFS}
       cp files/setup ${SINGULARITY_ROOTFS}
 
