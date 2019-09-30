@@ -54,6 +54,21 @@ LFRic run workflow:
 
 Example of the dependencies of the built container inside and outside the container:
 
+With no Intel nor MPICH2 libraries in PATH:
+
+$ ldd gungho 
+	linux-vdso.so.1 (0x00007fff5cad1000)
+	libz.so.1 => /usr/lib/libz.so.1 (0x00001514fec3a000)
+	libmpifort.so.12 => not found
+	libmpi.so.12 => not found
+	libm.so.6 => /usr/lib/libm.so.6 (0x00001514feaf4000)
+	libiomp5.so => not found
+	libpthread.so.0 => /usr/lib/libpthread.so.0 (0x00001514fead3000)
+	libc.so.6 => /usr/lib/libc.so.6 (0x00001514fe90e000)
+	/lib64/ld-linux-x86-64.so.2 => /usr/lib64/ld-linux-x86-64.so.2 (0x00001514fee82000)
+	libgcc_s.so.1 => /usr/lib/libgcc_s.so.1 (0x00001514fe8f4000)
+	libdl.so.2 => /usr/lib/libdl.so.2 (0x00001514fe8ef000)
+
 Inside container:
 $ ldd gungho
 	linux-vdso.so.1 =>  (0x00007ffe77af6000)
