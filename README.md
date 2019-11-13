@@ -59,7 +59,7 @@ Setting the bind points to the Intel/modules(if required) directories in a simil
 Inside the container
 ```
 setup/load Intel fortran
-. /contianer/setup
+. /container/setup
 ```
 Obtain LFRic. For gungho the Makefile needs to be edited. Change the lines:
 ```

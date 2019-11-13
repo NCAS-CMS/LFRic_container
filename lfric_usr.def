@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: centos:latest
+From: centos:7
 IncludeCmd: yes
 
 %setup
@@ -17,6 +17,7 @@ IncludeCmd: yes
       yum install -y wget subversion perl-URI
 
       pip install --no-cache-dir  --upgrade pip
+      pip install --upgrade setuptools
       pip install Jinja2
       pip install PSyclone
 

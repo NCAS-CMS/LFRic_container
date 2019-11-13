@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: centos:latest
+From: centos:7
 IncludeCmd: yes
 
 %setup
