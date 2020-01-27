@@ -99,6 +99,7 @@ mv *INTEL_MPI* arch
 ./make_xios --full --arch INTEL_MPI --job $NCORES
 cp -r lib $INSTALL_DIR
 cp inc/* $INSTALL_DIR/include
+cp bin/* $INSTALL_DIR/bin
 
 #pFUnit
 cd $BUILD_DIR
