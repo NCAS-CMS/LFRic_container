@@ -15,7 +15,11 @@ IncludeCmd: yes
       yum install -y wget subversion perl-URI
 
 
-      mkdir -p /opt/intel
-      mkdir -p /container
-      
+      mkdir -p /container/opt
 
+#Move devtoolset
+      cp -a /opt/rh /container/opt
+      sed 's+/opt/rh+/container/opt/rh+g' /container/opt/rh/devtoolset-7/enable > /container/opt/rh/devtoolset-7/enable.new
+      cp /container/opt/rh/devtoolset-7/enable.new /container/opt/rh/devtoolset-7/enable
+      rm -fr /opt/rh
+      

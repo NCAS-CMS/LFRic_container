@@ -1,5 +1,5 @@
 
-. /opt/rh/devtoolset-7/enable
+. /container/opt/rh/devtoolset-7/enable
 
 
 BUILD_DIR=/tmp/build
@@ -23,7 +23,7 @@ HDF5=1.8.16
 NETCDF4=4.3.3.1
 NETCDF_FORTRAN=4.4.2
 NETCDF_CXX=4.2
-YAXT=0.6.0
+YAXT=0.8.1
 PFUNIT=3.2.9
 
 
