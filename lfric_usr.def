@@ -14,7 +14,7 @@ IncludeCmd: yes
       yum install -y environment-modules tclx
       yum install -y centos-release-scl
       yum install -y devtoolset-7-gcc devtoolset-7-gcc-c++ automake zlib-static
-      yum install -y wget subversion perl-URI udunits2-devel
+      yum install -y wget subversion perl-URI udunits2-devel which man
 
 #Python 3
       yum install -y python36 python36-devel 
