@@ -38,9 +38,9 @@ Linux host to build and run.
 ## 1 Obtain container
 either:
 
-* Download the latest version of the Singularity container from Sylabs Cloud Library.
+* (Recommended) Download the latest version of the Singularity container from Sylabs Cloud Library.
 ```
-singularity pull [--disable-cache] library://simonwncas/default/lfric_env
+singularity pull [--disable-cache] lfric_env.sif library://simonwncas/default/lfric_env
 ```
   Note: `--disable-cache` is required if using Archer2.
 
@@ -107,10 +107,12 @@ This approach is a variation on the [Singularity MPI Bind model](https://sylabs.
 
 Note: this only applies when a model is run, the executable is compiled using the method above, without any reference to local libraries.
 
-##Identify local compatible MPI
+## Identify local compatible MPI
+
 A MPICH ABI compatible MPI is required. These have MPI libraries named `libmpifort.so.12` and `libmpi.so.12`. The location of these libraries varies from system to system. When logged directly onto the system, `which mpif90`  should show where the MPI binaries are located, and the MPI libraries will be in a directory `../lib` relative to this. On Cray systems the `cray-mpich-abi` libraries are needed, which can are in `/opt/cray/pe/mpich/8.0.16/ofi/gnu/9.1/lib-abi-mpich` or similar.
 
-##Build bind points and LD_LIBRARY_PATH
+## Build bind points and LD_LIBRARY_PATH
+
 The local MPI libraries need to be made available to the container. Bind points are required so that containerised processes can access the local directories. Also the `LD_LIBRARY_PATH` inside the container needs updating to reflect the path to the local libraries.
 
 For example, assuming the system MPI libraries are in `/opt/mpich/lib`, set the bind directory with
@@ -125,11 +127,12 @@ for Singularity v3.7 and over
 ```
 export LOCAL_LD_LIBRARY_PATH="/opt/mpich/lib:\$LD_LIBRARY_PATH"
 ```
-##Construct run command and submit
+
+## Construct run command and submit
 
 For Singularity versions <3.7, the command to run gungho is now
 ```
- 
+singularity exec $BIND_DIR lfric_env.sif ../bin/gungho configuration.nml
 ```
 for Singularity v3.7 and over
 
@@ -149,7 +152,7 @@ on ARCHER2
 
 If running with slurm, `/var/spool/slurmd` should be appended to `BIND_DIR`, separated with a comma.
 
-##Update for local MPI dependencies
+## Update for local MPI dependencies
 It could be possible that the local MPI libraries have other dependencies which are in other system directories. In this case `BIND_DIR` and `[SINGULARITYENV_]LOCAL_LD_LIBRARY_PATH` have to be updated to reflect these. For example on ARCHER2 these are
 ```
 export BIND_DIR="-B /opt/cray,/usr/lib64:/usr/lib/host,/var/spool/slurmd"
