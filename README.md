@@ -1,6 +1,6 @@
 # LFRic_container
 
- of the [LFRic](https://www.metoffice.gov.uk/research/approach/modelling-systems/lfric) software stack built with an included [Intel one API compiler](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit.html) using [Singularity](https://sylabs.io/).
+A  [Singularity](https://sylabs.io/) container of the [LFRic](https://www.metoffice.gov.uk/research/approach/modelling-systems/lfric) software stack built with an included [Intel one API compiler](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit.html).
 
 It is based on [Fedora](https://getfedora.org/) and includes all of the software package dependencies and tools in the standard [LFRic build environment](https://code.metoffice.gov.uk/trac/lfric/wiki/LFRicTechnical/LFRicBuildEnvironment) but compiled with Intel fortran rather than gfortran, and gcc.
 
