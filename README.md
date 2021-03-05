@@ -1,6 +1,6 @@
 # LFRic_container
 
-Containerisation of the [LFRic](https://www.metoffice.gov.uk/research/approach/modelling-systems/lfric) software stack built with the included [Intel one API compiler](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit.html).
+ of the [LFRic](https://www.metoffice.gov.uk/research/approach/modelling-systems/lfric) software stack built with an included [Intel one API compiler](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit.html) using [Singularity](https://sylabs.io/).
 
 It is based on [Fedora](https://getfedora.org/) and includes all of the software package dependencies and tools in the standard [LFRic build environment](https://code.metoffice.gov.uk/trac/lfric/wiki/LFRicTechnical/LFRicBuildEnvironment) but compiled with Intel fortran rather than gfortran, and gcc.
 
@@ -12,7 +12,7 @@ The LFRic source code is not containerised, it is retrieved as usual via subvers
 
 The container is compatible with [slurm](https://slurm.schedmd.com/documentation.html), and the compiled executable can be run in batch using the local MPI libraries, if the host system has an [MPICH ABI](https://www.mpich.org/abi/) compatible MPI.
 
-A rebuilt container is available from [Sylabs Cloud](https://cloud.sylabs.io/library/simonwncas/default/test).
+A prebuilt container is available from [Sylabs Cloud](https://cloud.sylabs.io/library/simonwncas/default/test).
 
 lfric_env.def is the Singularity definition file.
 
