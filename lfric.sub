@@ -19,7 +19,7 @@ cd <base_dir>/trunk/gungho/example
 
 export SINGULARITYENV_LOCAL_LD_LIBRARY_PATH=/opt/cray/pe/mpich/8.0.16/ofi/gnu/9.1/lib-abi-mpich:/opt/cray/libfabric/1.11.0.0.233/lib64:/opt/cray/pe/pmi/6.0.7/lib
 
-export BIND_DIR="-B /opt/cray,/usr/lib64:/usr/lib/host,/var/spool/slurmd"
+export BIND_OPT="-B /opt/cray,/usr/lib64:/usr/lib/host,/var/spool/slurmd"
 
-srun --cpu-bind=cores singularity exec $BIND_DIR <base_dir>/lfric_env.sif ../bin/gungho configuration.nml
+srun --cpu-bind=cores singularity exec $BIND_OPT <base_dir>/lfric_env.sif ../bin/gungho configuration.nml
 
