@@ -1,0 +1,25 @@
+#!/bin/sh
+#SBATCH --job-name=lfric
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=6
+#SBATCH --cpus-per-task=1
+#SBATCH --time=00:10:00
+
+#SBATCH --account=<account>
+#SBATCH --export=none
+
+#SBATCH --partition=standard
+#SBATCH --qos=short
+#SBATCH --reservation=shortqos
+
+# Setup the batch environment
+module load epcc-job-env
+
+cd <base_dir>/trunk/gungho/example
+
+export SINGULARITYENV_LOCAL_LD_LIBRARY_PATH=/opt/cray/pe/mpich/8.0.16/ofi/gnu/9.1/lib-abi-mpich:/opt/cray/libfabric/1.11.0.0.233/lib64:/opt/cray/pe/pmi/6.0.7/lib
+
+export BIND_DIR="-B /opt/cray,/usr/lib64:/usr/lib/host,/var/spool/slurmd"
+
+srun --cpu-bind=cores singularity exec $BIND_DIR <base_dir>/lfric_env.sif ../bin/gungho configuration.nml
+

@@ -1,77 +1,162 @@
 # LFRic_container
 
-Containerisation of the LFRic software stack.
+Containerisation of the [LFRic](https://www.metoffice.gov.uk/research/approach/modelling-systems/lfric) software stack built with the included [Intel one API compiler](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit.html).
 
-Please see README.txt for a complete description.
+It is based on [Fedora](https://getfedora.org/) and includes all of the software package dependencies and tools in the standard [LFRic build environment](https://code.metoffice.gov.uk/trac/lfric/wiki/LFRicTechnical/LFRicBuildEnvironment) but compiled with Intel fortran rather than gfortran, and gcc.
+
+A compiler is **not** required on the build and run machine where the container is deployed. All compilation of LFRic is done via the containerised compilers.
+
+LFRic components are built using a shell within the container.
+The shell automatically sets up the build environment when invoked. 
+
+The LFRic source code is not containerised, it is retrieved as usual via subversion from within the container shell so there is no need to rebuild the container for LFRic trunk updates.
+
+The container is compatible with [slurm](https://slurm.schedmd.com/documentation.html) and the compiled executable can be run in batch, using the local MPI libraries, if the host system has an [MPICH ABI](https://www.mpich.org/abi/) compatible MPI.
+
+A rebuilt container is available from [Sylabs Cloud](https://cloud.sylabs.io/library/simonwncas/default/test).
+
+lfric_env.def is the Singularity definition file.
+
+lfric.sub is and example ARCHER2 submission script.
+
+
 
 # Requirements
-Container build machine: Singularity 2.6+; Intel Fortran v17; sudo for Singularity*
+## Base requirement
+Linux host to build and run.
 
-LFRic build machine: Singularity 2.6+ (compatible with build machine); Intel Fortran v17;MPICH compatible MPI.
+[Singularity](https://sylabs.io/) 3.0+ (3.7 preferred); Access to [Met Office Science Repository Service](https://code.metoffice.gov.uk)
 
-*Although the simpliest way to build the container is with Intel v17 on the build machine, it is possible to build it without Intel v17 on the build machine, please see workflow below.
+## Optional requirements
+
+`sudo` access if changes to the container are required. This can be on a different system from the LFRic build and run machine.
+
+`MPICH` compatible MPI on deployment system for use of local MPI libraries.
 
 # Workflow
 
-## Container build
-### 1  Build base container on container build machine
+## 1 Obtain container
+either:
+
+* Download the latest version of the Singularity container from Sylabs Cloud Library.
 ```
-sudo singularity build lfric_base.sif lfric_base.def
+singularity pull [--disable-cache] library://simonwncas/default/lfric_env
+```
+  Note: `--disable-cache` is required if using Archer2.
+
+* Build container using `lfric_env.sif`.
+```
+sudo singularity build lfric_env.sif lfric_env.def 
+```
+Note: `sudo` access required. 
+
+## 2 Start interactive shell on container
+On deployment machine.
+```
+singularity shell lfric_env.sif
 ```
 
-### 2 Log onto base container
+## 3 Download LFRic source
 ```
-singularity shell -B /opt:/opt lfric_base.sif
+svn checkout --username <username> https://code.metoffice.gov.uk/svn/lfric/LFRic/trunk
+svn export --username <username> https://code.metoffice.gov.uk/svn/lfric/GPL-utilities/trunk rose-picker
 ```
-Note: Replace the bind point /opt:/opt with the top level directory were the Intel compiler is located.
+Due to licensing concerns, the rose-picker part of the LFRic configuration system is held as a separate project.
 
-### 3 Build stack inside container
-```
-. /opt/intel/compilers_and_libraries_2017.4.196/linux/bin/ifortvars.sh  intel64
-. ./build_stack
-```
-This builds the software stack using the containerise environment and tars it into files/container_usr.tgz.
 
-Replace the ifortvars.sh command with your local Intel Fortran.
-
-Note: Modules can be used. Include a bind of their local top level directory. Then, inside container:
+## 4 Set rose-picker environment
 ```
-module purge
-module load name_of_your_intel17
-```
-Log out of base container
-
-If you don't have a copy of Intel Fortran on continer build system, copy the base container to the LFRic build mschine, and build the tarball there using the method described above. Then copy the container_usr.tgz file into the files directory on the container build machine.
-
-### 4 Build final container
-```
-sudo singularity build lfric_usr.sif lfric_usr.def
+export ROSE_PICKER=$PWD/rose-picker
+export PYTHONPATH=$ROSE_PICKER/lib/python:$PYTHONPATH
+export PATH=$ROSE_PICKER/bin:$PATH
 ```
 
-### 5 Build LFRic on LFRic build machine
+## 5 Edit ifort.mk
 
-Copy lfric_usr.sif container to the LFRic build machine. Then
+There are issues with the MPICH, the Intel compiler and Fortran08 C bindings, please see [https://code.metoffice.gov.uk/trac/lfric/ticket/2273](URL) for more information. Edit ifork.mk.
 ```
-singularity shell -B /opt:/opt lfric_usr.sif
+vi trunk/infrastructure/build/fortran/ifort.mk
 ```
-Setting the bind points to the Intel/modules(if required) directories in a similar way as above.
-
-Inside the container
+and change the line
 ```
-setup/load Intel fortran
-. /container/setup
-```
-Obtain LFRic. For gungho the Makefile needs to be edited. Change the lines:
-```
-export EXTERNAL_DYNAMIC_LIBRARIES = yaxt yaxt_c netcdff netcdf hdf5 \
-                                    $(CXX_RUNTIME_LIBRARY)
-export EXTERNAL_STATIC_LIBRARIES = xios
+FFLAGS_WARNINGS           = -warn all -warn errors
 ```
 to
 ```
-export EXTERNAL_DYNAMIC_LIBRARIES = 
-export EXTERNAL_STATIC_LIBRARIES = yaxt yaxt_c xios netcdff netcdf hdf5_hl hdf5  z :libstdc++.a
+FFLAGS_WARNINGS           = -warn all,noexternal -warn errors
 ```
-LFRic can now be built. All of the required environment variables are set up with the setup command.
+Note: `nano` is also available in the container environment.
 
-The executable is compatible with any MPICH derivative and should be run natively (ie outside the container) on the target machine.
+## 6 Build gungho executable 
+```
+cd trunk/gungho
+make build [-j nproc]
+```
+The executable is built using the Intel compiler and associated software stack within the container and written to the local filesystem.
+## 7 Run executable
+```
+cd example
+mpiexec -np 6 ../bin/gungho configuration.nml
+```
+Note: This uses the MPI runtime libraries built into in the container. If the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then see below on how to use [MPICH ABI](https://www.mpich.org/abi/) to access the local MPI and therefore the fast interconnects when running the executable via the container.
+OpenMPI will not work with this method.
+
+# Using MPICH ABI
+
+This approach is a variation on the [Singularity MPI Bind model](https://sylabs.io/guides/3.7/user-guide/mpi.html#bind-model). The compiled model executable is run within the container with suitable options to allow access to the local MPI installation. At runtime, containerised libraries are used by the executable apart from  the local MPI libraries.
+
+Note: this only applies when a model is run, the executable is compiled using the method above, without any reference to local libraries.
+
+##Identify local compatible MPI
+A MPICH ABI compatible MPI is required. These have MPI libraries named `libmpifort.so.12` and `libmpi.so.12`. The location of these libraries varies from system to system. When logged directly onto the system, `which mpif90`  should show where the MPI binaries are located, and the MPI libraries will be in a directory `../lib` relative to this. On Cray systems the `cray-mpich-abi` libraries are needed, which can are in `/opt/cray/pe/mpich/8.0.16/ofi/gnu/9.1/lib-abi-mpich` or similar.
+
+##Build bind points and LD_LIBRARY_PATH
+The local MPI libraries need to be made available to the container. Bind points are required so that containerised processes can access the local directories. Also the `LD_LIBRARY_PATH` inside the container needs updating to reflect the path to the local libraries.
+
+For example, assuming the system MPI libraries are in `/opt/mpich/lib`, set the bind directory with
+```
+export BIND_DIR=/opt/mpich
+```
+then for Singularity versions <3.7
+```
+export SINGULARITYENV_LOCAL_LD_LIBRARY_PATH=/opt/mpich/lib
+```
+for Singularity v3.7 and over
+```
+export LOCAL_LD_LIBRARY_PATH="/opt/mpich/lib:\$LD_LIBRARY_PATH"
+```
+##Construct run command and submit
+
+For Singularity versions <3.7, the command to run gungho is now
+```
+ 
+```
+for Singularity v3.7 and over
+
+```
+singularity exec $BIND_DIR --env=LD_LIBRARY_PATH=$LOCAL_LD_LIBRARY_PATH lfric_env.sif ../bin/gungho configuration.nml
+```
+
+Running with mpirun/slurm is straightforward, just use the standard command for running MPI jobs eg:
+```
+mpirun -n <NUMBER_OF_RANKS> singularity exec $BIND_DIR lfric_env.sif ../bin/gungho configuration.nml
+```
+or
+```
+srun --cpu-bind=cores singularity exec $BIND_DIR lfric_env.sif ../bin/gungho configuration.nml
+```
+on ARCHER2
+
+If running with slurm, `/var/spool/slurmd` should be appended to `BIND_DIR`, separated with a comma.
+
+##Update for local MPI dependencies
+It could be possible that the local MPI libraries have other dependencies which are in other system directories. In this case `BIND_DIR` and `[SINGULARITYENV_]LOCAL_LD_LIBRARY_PATH` have to be updated to reflect these. For example on ARCHER2 these are
+```
+export BIND_DIR="-B /opt/cray,/usr/lib64:/usr/lib/host,/var/spool/slurmd"
+```
+and
+```
+export SINGULARITYENV_LOCAL_LD_LIBRARY_PATH=/opt/cray/pe/mpich/8.0.16/ofi/gnu/9.1/lib-abi-mpich:/opt/cray/libfabric/1.11.0.0.233/lib64:/opt/cray/pe/pmi/6.0.7/lib
+```
+Discovering these is a process of trail and error where the executable is run via the container and any missing libraries included the the above environment variables.
+`/usr/lib/host` Is at the end of `LD_LIBRARY_PATH` in the container, so that the bind point can be used to provide any remaining system libraries dependencies in standard locations such as `/usr/lib64`.

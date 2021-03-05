@@ -1,0 +1,177 @@
+Bootstrap: docker
+From: fedora:latest
+
+%files
+files/mk_arch_files_intel.sh /opt
+files/oneAPI.repo /opt
+####      files/container.tgz /opt
+
+%post
+# Build stack
+
+#Intel repo
+mv /opt/oneAPI.repo /etc/yum.repos.d
+
+#Update and install pre-built software stack. 
+dnf -y update
+dnf -y install  make cmake git python2 python3-devel python3 python3-pip automake wget subversion perl-URI perl-Text-Balanced perl-core perl-XML-Parser which file  zlib-devel libcurl-devel vim gcc gcc-c++ hostname nano
+dnf -y install intel-oneapi-compiler-fortran
+
+#Setup Intel
+. /opt/intel/oneapi/setvars.sh
+
+#set locale
+export LC_ALL=C
+
+#### cd /&&tar zxvf /opt/container.tgz
+
+BUILD_DIR=/opt/build
+BASE_DIR=/container
+mkdir -p $BASE_DIR
+mkdir -p $BUILD_DIR
+
+NCORES=8
+
+MPICH=3.3.2
+HDF5=1.8.16
+NETCDF4=4.3.3.1
+NETCDF_FORTRAN=4.4.2
+NETCDF_CXX=4.2
+YAXT=0.9.0
+PFUNIT=3.2.9
+
+export NETCDF_DIR=$BASE_DIR/netcdf
+export MPICH_DIR=$BASE_DIR/mpich
+export INSTALL_DIR=$BASE_DIR/usr
+export CPPFLAGS="-I$INSTALL_DIR/include -I$NETCDF_DIR/include"
+export FFLAGS="-I$INSTALL_DIR/include -I$NETCDF_DIR/include"
+export LDFLAGS="-L$INSTALL_DIR/lib -L$NETCDF_DIR/lib"
+export PATH=$MPICH_DIR/bin:$NETCDF_DIR/bin:$INSTALL_DIR/bin:$PATH
+export LD_LIBRARY_PATH=$MPICH_DIR/lib:$NETCDF_DIR/lib:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
+
+#mpich
+cd $BUILD_DIR
+wget http://www.mpich.org/static/downloads/$MPICH/mpich-$MPICH.tar.gz
+tar -xzf mpich-$MPICH.tar.gz
+cd mpich-$MPICH
+FC=ifort CC=gcc ./configure --prefix=$MPICH_DIR --enable-cxx --enable-threads=multiple --enable-shared
+make -j$NCORES
+make install
+
+#Install gfortran for external dependencies. Do after MPICH build otherwise
+#issues with ISO bindings for gcc/Intel
+dnf -y install gcc-gfortran
+
+#hdf5
+cd $BUILD_DIR
+wget http://www.hdfgroup.org/ftp/HDF5/prev-releases/hdf5-1.8/hdf5-$HDF5/src/hdf5-$HDF5.tar.gz
+tar -xzf hdf5-$HDF5.tar.gz
+cd $BUILD_DIR/hdf5-$HDF5
+CC=mpicc FC=mpif90 ./configure --prefix=$NETCDF_DIR --enable-fortran --enable-fortran2003 --enable-parallel
+make -j$NCORES
+make install
+
+#netcdf
+cd $BUILD_DIR
+wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-$NETCDF4.tar.gz
+tar -xzf netcdf-$NETCDF4.tar.gz
+cd $BUILD_DIR/netcdf-$NETCDF4
+CC=mpicc CXX=mpicxx FF=mpif90 FC=mpif90 ./configure --prefix=$NETCDF_DIR --disable-dap
+make -j$NCORES
+make install
+
+export LIBS="-lnetcdf -lhdf5_hl -lhdf5 -ldl -lm -lz"
+
+#netcdf-fortran
+cd $BUILD_DIR
+wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-$NETCDF_FORTRAN.tar.gz
+tar -xzf netcdf-fortran-$NETCDF_FORTRAN.tar.gz
+cd $BUILD_DIR/netcdf-fortran-$NETCDF_FORTRAN
+CC=mpicc CXX=mpicxx FF=mpif90 FC=mpif90 ./configure --prefix=$NETCDF_DIR
+make -j$NCORES
+make install
+
+#netcdf-cxx
+cd $BUILD_DIR
+wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-cxx-$NETCDF_CXX.tar.gz
+tar -xzf netcdf-cxx-$NETCDF_CXX.tar.gz
+cd $BUILD_DIR/netcdf-cxx-$NETCDF_CXX
+CC=mpicc CXX=mpicxx FF=mpif90 FC=mpif90 ./configure --prefix=$NETCDF_DIR
+make -j$NCORES
+make install
+
+
+export LIBS='-lnetcdff -lnetcdf -lhdf5_hl -lhdf5'
+
+#yaxt
+cd $BUILD_DIR
+wget https://www.dkrz.de/redmine/attachments/download/498/yaxt-$YAXT.tar.gz
+tar -xzf yaxt-$YAXT.tar.gz
+cd $BUILD_DIR/yaxt-$YAXT
+./configure --prefix=$INSTALL_DIR --with-idxtype=long CC=mpicc FC=mpif90 FPP="mpif90 -E"
+make -j$NCORES
+make install
+
+
+#XIOS
+#use mk_arch_files.sh 
+cd $BUILD_DIR
+export HDF5_DIR=$NETCDF_DIR 
+svn co http://forge.ipsl.jussieu.fr/ioserver/svn/XIOS/trunk XIOS 
+cd $BUILD_DIR/XIOS
+/opt/mk_arch_files_intel.sh INTEL_MPI
+mv *INTEL_MPI* arch
+./make_xios --full --arch INTEL_MPI --job $NCORES
+cp -r lib $INSTALL_DIR
+cp inc/* $INSTALL_DIR/include
+mkdir -p $INSTALL_DIR/bin
+cp bin/* $INSTALL_DIR/bin
+rm -f /opt/mk_arch_files_intel.sh
+
+#pFUnit
+cd $BUILD_DIR
+wget https://sourceforge.net/projects/pfunit/files/latest/download/pFUnit-$PFUNIT.tgz
+tar -xzf pFUnit-$PFUNIT.tgz
+cd pFUnit-$PFUNIT
+export F90_VENDOR=Intel
+export F90=ifort
+export MPIF90=mpif90
+#Hack for python2
+ln -s /usr/bin/python2 $INSTALL_DIR/bin/python
+make -j $NCORES
+make install
+rm $INSTALL_DIR/bin/python
+
+#Clean up
+cd $BASE_DIR
+rm -fr $BUILD_DIR
+
+#Psyclone
+python3 -m pip install --no-cache-dir  --upgrade pip
+python3 -m pip install --upgrade setuptools
+python3 -m pip install Jinja2
+python3 -m pip install PSyclone
+ln -s /usr/bin/python3 $INSTALL_DIR/bin/python
+
+%environment
+
+export LC_ALL=C
+export BASE_DIR=/container
+export INSTALL_DIR=$BASE_DIR/usr
+export MPICH_DIR=$BASE_DIR/mpich
+export PFUNIT=$INSTALL_DIR
+export NETCDF_DIR=$BASE_DIR/netcdf
+export CPPFLAGS="-I$INSTALL_DIR/include -I$NETCDF_DIR/include"
+export FFLAGS="-I$INSTALL_DIR/include -I$NETCDF_DIR/include -I$MPICH_DIR/include"
+export LDFLAGS="-L$INSTALL_DIR/lib -L$NETCDF_DIR/lib"
+export PATH=$MPICH_DIR/bin:$NETCDF_DIR/bin:$INSTALL_DIR/bin:/opt/intel/oneapi/compiler/latest/linux/bin/intel64:$PATH
+export PSYCLONE_CONFIG=/usr/local/share/psyclone/psyclone.cfg
+
+#Library path
+export LD_LIBRARY_PATH="$LOCAL_LD_LIBRARY_PATH:$MPICH_DIR/lib:$NETCDF_DIR/lib:$INSTALL_DIR/lib:/opt/intel/oneapi/compiler/latest/linux/compiler/lib/intel64_lin:$LD_LIBRARY_PATH:/usr/lib64:/usr/lib64/libibverbs:/usr/lib/host"
+
+export FC=ifort
+export FPP="cpp -traditional-cpp"
+export LDMPI=mpif90
+#Unset CRAY program env
+unset PE_ENV
