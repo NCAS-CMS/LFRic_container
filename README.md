@@ -16,7 +16,7 @@ A prebuilt container is available from [Sylabs Cloud](https://cloud.sylabs.io/li
 
 lfric_env.def is the Singularity definition file.
 
-lfric.sub is and example ARCHER2 submission script.
+archer2_lfric.sub is an example ARCHER2 submission script and dirac_lfric.sub an example DiRAC HPC submission script.
 
 
 
@@ -57,6 +57,7 @@ On deployment machine.
 ```
 singularity shell lfric_env.sif
 ```
+Now, using the shell **inside** the container:
 
 ## 3 Download LFRic source
 ```
