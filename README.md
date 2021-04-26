@@ -12,7 +12,7 @@ The LFRic source code is not containerised, it is retrieved as usual via subvers
 
 The container is compatible with [slurm](https://slurm.schedmd.com/documentation.html), and the compiled executable can be run in batch using the local MPI libraries, if the host system has an [MPICH ABI](https://www.mpich.org/abi/) compatible MPI.
 
-A prebuilt container is available from [Sylabs Cloud](https://cloud.sylabs.io/library/simonwncas/default/lfric_env).
+A pre-built container is available from [Sylabs Cloud](https://cloud.sylabs.io/library/simonwncas/default/lfric_env).
 
 lfric_env.def is the Singularity definition file.
 
@@ -101,7 +101,15 @@ The executable is built using the Intel compiler and associated software stack w
 cd example
 mpiexec -np 6 ../bin/gungho configuration.nml
 ```
-Note: This uses the MPI runtime libraries built into in the container. If the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then see below on how to use [MPICH ABI](https://www.mpich.org/abi/) to access the local MPI and therefore the fast interconnects when running the executable via the container.
+Note: This uses the MPI runtime libraries built into in the container.
+
+## 8 Submit executable.
+
+If the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then  [MPICH ABI](https://www.mpich.org/abi/) can be used to access the local MPI and therefore the fast interconnects when running the executable via the container. See the section below for full details. Two example slurm submission scripts are provided, one for ARCHER2 and one for DiRAC.
+
+Note: These scripts are submitted on the command line as usual and not from within the container.
+
+
 
 # Using MPICH ABI
 
