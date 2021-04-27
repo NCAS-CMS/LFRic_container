@@ -1,0 +1,137 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# (C) British Crown Copyright 2017 Met Office.
+#-------------------------------------------------------------------------------
+set -u
+
+echo "Checking your setup for accessing the Met Office Science Repository Service (SRS)"
+
+function info {
+  echo [INFO] $1
+}
+function warn {
+  echo [WARN] $1 1>&2
+}
+function error {
+  echo [ERROR] $1 1>&2
+  exit 1
+}
+
+info "$(svn --version|head -1)"
+info "$(rose --version)"
+skip_access_tests=false
+if [[ ! -f ~/.subversion/servers ]]; then
+  error "~/.subversion/servers: file not found"
+else
+  rose_config_opt="-f $HOME/.subversion/servers"
+  [[ -f /etc/subversion/servers ]] && rose_config_opt="-f /etc/subversion/servers $rose_config_opt"
+  if [[ $(rose config $rose_config_opt groups metofficesharedrepos) != "code*.metoffice.gov.uk" ]]; then
+    warn '~/.subversion/servers: "[groups] metofficesharedrepos" not set correctly'
+  fi
+  if [[ $(rose config $rose_config_opt metofficesharedrepos store-plaintext-passwords) != "no" ]]; then
+    warn '~/.subversion/servers: "[metofficesharedrepos] store-plaintext-passwords" should be set to "no"'
+  fi
+  if ! $(rose config -q -f ~/.subversion/servers metofficesharedrepos username); then
+    error '~/.subversion/servers: "[metofficesharedrepos] username" not set'
+  fi
+  username=$(rose config -f ~/.subversion/servers metofficesharedrepos username)
+  info '~/.subversion/servers: SRS username configured as "'$username'"'
+  if ! [[ "$username" =~ ^[a-z]+$ ]]; then
+    warn 'SRS username should be lowercase letters only'
+  fi
+fi
+
+if $(rose config -q -f ~/.subversion/config auth password-stores); then
+  warn '~/.subversion/config: "[auth] password-stores" should not be set'
+fi
+
+# Get the id Subversion uses to index the password
+CACHE_ID=$(echo -n "<https://code.metoffice.gov.uk:443> Met Office Code" | md5sum | cut -f1 -d " ")
+
+if [[ ! -f ~/.subversion/auth/svn.simple/$CACHE_ID ]]; then
+  warn "~/.subversion/auth/svn.simple/$CACHE_ID: not found (Subversion access not setup yet)"
+  skip_access_tests=true
+else
+  svn_username=$(cat  ~/.subversion/auth/svn.simple/$CACHE_ID | sed -n '/username/{n;n;p}')
+  if [[ $svn_username != $username ]]; then
+    warn "~/.subversion/auth/svn.simple/$CACHE_ID: SRS username does not match ("'"'$svn_username'")'
+  fi
+  passtype=$(cat  ~/.subversion/auth/svn.simple/$CACHE_ID | sed -n '/passtype/{n;n;p}')
+  if [[ $passtype != "gnome-keyring" && $passtype != "gpg-agent" ]]; then
+    warn "~/.subversion/auth/svn.simple/$CACHE_ID: password not stored in gnome keyring or gpg-agent ("'"'$passtype'")'
+    skip_access_tests=true
+  else
+    info "~/.subversion/auth/svn.simple/$CACHE_ID: password stored in $passtype"
+  fi
+fi
+
+if [[ ! -f ~/.metomi/rose.conf ]]; then
+  warn "~/.metomi/rose.conf: file not found"
+else
+  if ! $(rose config -q -f ~/.metomi/rose.conf rosie-id prefix-username.u); then
+    error '~/.metomi/rose.conf: "[rosie-id] prefix-username.u" not set'
+  fi
+  rosie_username=$(rose config -f ~/.metomi/rose.conf rosie-id prefix-username.u)
+  if [[ $rosie_username != $username ]]; then
+    warn '~/.metomi/rose.conf: SRS username does not match ("'$rosie_username'")'
+  fi
+fi
+
+if [[ ${passtype:=none} != "gpg-agent" ]]; then
+  if ! pgrep -f -u $USER gnome-keyring-daemon >/dev/null; then
+    if [[ ${passtype:=none} == "gnome-keyring" ]]; then
+      error "GNOME keyring is not running"
+      skip_access_tests=true
+    else
+      info "GNOME keyring is not running"
+    fi
+  elif [[ ! -f ~/.gnome2/keyrings/login.keyring ]]; then
+    if grep -q -i "release 7" /etc/redhat-release >/dev/null; then
+      if [[ ! -f ~/.local/share/keyrings/login.keyring ]]; then
+        error "~/.local/share/keyrings/login.keyring: file not found"
+        [[ ${passtype:=none} == "gnome-keyring" ]] && skip_access_tests=true
+      fi
+    else
+      error "~/.gnome2/keyrings/login.keyring: file not found"
+      [[ ${passtype:=none} == "gnome-keyring" ]] && skip_access_tests=true
+    fi
+  fi
+fi
+
+if [[ ${passtype:=none} != "gnome-keyring" ]]; then
+  [[ -d /opt/hpctools/gnupg/2.0.31/bin ]] && PATH=/opt/hpctools/gnupg/2.0.31/bin:$PATH
+  if ! gpg-agent 2>/dev/null; then
+    if [[ ${passtype:=none} == "gpg-agent" ]]; then
+      error "gpg-agent is not running"
+    else
+      info "gpg-agent is not running"
+    fi
+  elif echo "GET_PASSPHRASE --no-ask rosie:https:code.metoffice.gov.uk Err Pmt Des" | gpg-connect-agent | grep -q "^OK "; then
+    if echo "GET_PASSPHRASE --no-ask rosie:https:code.metoffice.gov.uk Err Pmt Des" | gpg-connect-agent | grep -q "64756D6D79"; then
+      info "gpg-agent: dummy password cached"
+      [[ ${passtype:=none} == "gpg-agent" ]] && skip_access_tests=true
+    else
+      info "gpg-agent: password cached"
+    fi
+  else
+    info "gpg-agent: no password cached"
+    [[ ${passtype:=none} == "gpg-agent" ]] && skip_access_tests=true
+  fi
+fi
+
+if $skip_access_tests; then
+  info "Skipping access tests"
+else
+  svn info --non-interactive https://code.metoffice.gov.uk/svn/test >/dev/null
+  if [[ $? != 0 ]]; then
+    warn "Subversion access not working"
+  else
+    info "Subversion access successful"
+  fi
+  rosie hello --prefix=u > /dev/null 2>&1
+  if [[ $? != 0 ]]; then
+    warn 'Rosie "u" access not working'
+  else
+    info 'Rosie "u" access successful'
+  fi
+fi

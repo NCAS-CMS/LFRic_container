@@ -40,7 +40,7 @@ either:
 
 * (Recommended) Download the latest version of the Singularity container from Sylabs Cloud Library.
 ```
-singularity pull [--disable-cache] lfric_env.sif library://simonwncas/default/lfric_env
+singularity pull [--disable-cache] lfric_env.sif library://simonwncas/default/lfric_env:latest
 ```
   Note: `--disable-cache` is required if using Archer2.
 
@@ -52,29 +52,48 @@ sudo singularity build lfric_env.sif lfric_env.def
 ```
 Note: `sudo` access required. 
 
-## 2 Start interactive shell on container
+## 2 Set up MOSRS account info
+**One time only.** Edit (or create) `~/.subversion/servers` and add the following
+```
+[groups]
+metofficesharedrepos = code*.metoffice.gov.uk
+
+[metofficesharedrepos]
+# Specify your Science Repository Service user name here
+username = myusername
+store-plaintext-passwords = no
+```
+Remember to replace `myusername` with your MOSRS username.
+
+## 3 Start interactive shell on container
 On deployment machine.
 ```
 singularity shell lfric_env.sif
 ```
 Now, using the shell **inside** the container:
 
-## 3 Download LFRic source
+## 4 Cache MOSRS password
 ```
-svn checkout --username <username> https://code.metoffice.gov.uk/svn/lfric/LFRic/trunk
-svn export --username <username> https://code.metoffice.gov.uk/svn/lfric/GPL-utilities/trunk rose-picker
+. mosrs-setup-gpg-agent
+```
+and enter your password when instructed. You may be asked twice.
+
+## 5 Download LFRic source
+```
+fcm co https://code.metoffice.gov.uk/svn/lfric/LFRic/trunk trunk
+fcm co https://code.metoffice.gov.uk/svn/lfric/GPL-utilities/trunk rose-picker
 ```
 Due to licensing concerns, the rose-picker part of the LFRic configuration system is held as a separate project.
 
 
-## 4 Set rose-picker environment
+## 6 Set rose-picker environment
 ```
 export ROSE_PICKER=$PWD/rose-picker
 export PYTHONPATH=$ROSE_PICKER/lib/python:$PYTHONPATH
 export PATH=$ROSE_PICKER/bin:$PATH
 ```
 
-## 5 Edit ifort.mk
+## 7 Edit ifort.mk
 
 There are issues with the MPICH, the Intel compiler and Fortran08 C bindings, please see [https://code.metoffice.gov.uk/trac/lfric/ticket/2273](URL) for more information. Edit ifork.mk.
 ```
@@ -90,22 +109,35 @@ FFLAGS_WARNINGS           = -warn all,noexternal -warn errors
 ```
 Note: `nano` is also available in the container environment.
 
-## 6 Build gungho executable 
+## 8 Build executable
+### gungho
 ```
 cd trunk/gungho
 make build [-j nproc]
 ```
-The executable is built using the Intel compiler and associated software stack within the container and written to the local filesystem.
-## 7 Run executable
+### lfric_atm
+```
+cd trunk/lfric_atm
+make build [-j nproc]
+```
+The executables are built using the Intel compiler and associated software stack within the container and written to the local filesystem.
+## 9 Run executable
+### gungho
 ```
 cd example
 mpiexec -np 6 ../bin/gungho configuration.nml
 ```
 Note: This uses the MPI runtime libraries built into in the container.
+### lfric_atm
+```
+cd example
+../bin/lfric_atm configuration.nml
+```
+Note: This is the "single column" test version of lfric_atm. Running a global model requires the use of `rose-stem` which is currently beyond the scope of this document.
 
-## 8 Submit executable.
+## 10 Submit executable.
 
-If the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then  [MPICH ABI](https://www.mpich.org/abi/) can be used to access the local MPI and therefore the fast interconnects when running the executable via the container. See the section below for full details. Two example slurm submission scripts are provided, one for ARCHER2 and one for DiRAC.
+If the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then  [MPICH ABI](https://www.mpich.org/abi/) can be used to access the local MPI and therefore the fast interconnects when running the executable via the container. See the section below for full details. Two example slurm gungho submission scripts are provided, one for ARCHER2 and one for DiRAC.
 
 Note: These scripts are submitted on the command line as usual and not from within the container.
 
