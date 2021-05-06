@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: fedora:latest
+From: fedora:33
 
 %files
 files/mk_arch_files_intel.sh /opt
