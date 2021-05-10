@@ -47,6 +47,7 @@ NETCDF_FORTRAN=4.4.2
 NETCDF_CXX=4.2
 YAXT=0.9.0
 PFUNIT=3.2.9
+PSYCLONE=1.9.0
 
 #fcm
 cd $BASE_DIR
@@ -190,7 +191,7 @@ rm -fr $BUILD_DIR
 python3 -m pip install --no-cache-dir  --upgrade pip
 python3 -m pip install --upgrade setuptools
 python3 -m pip install Jinja2
-python3 -m pip install PSyclone
+python3 -m pip install PSyclone==$PSYCLONE
 ln -s /usr/bin/python3 $INSTALL_DIR/bin/python
 
 
