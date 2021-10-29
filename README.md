@@ -10,13 +10,13 @@ LFRic components are built using a shell within the container and the shell auto
 
 The LFRic source code is not containerised, it is retrieved as usual via subversion from within the container shell so there is no need to rebuild the container for LFRic code updates.
 
-The container is compatible with [slurm](https://slurm.schedmd.com/documentation.html), and the compiled executable can be run in batch using the local MPI libraries, if the host system has an [MPICH ABI](https://www.mpich.org/abi/) compatible MPI.
+The container is compatible with [slurm](https://slurm.schedmd.com/documentation.html), and the compiled executable can be run in batch using the local MPI libraries, if the host system has an [MPICH ABI](https://www.mpich.org/abi/) compatible MPI. An OpenMPI version is also available.
 
 A pre-built container is available from [Sylabs Cloud](https://cloud.sylabs.io/library/simonwncas/default/lfric_env).
 
 lfric_env.def is the Singularity definition file.
 
-archer2_lfric.sub is an example ARCHER2 submission script and dirac_lfric.sub an example DiRAC HPC submission script.
+archer2_lfric.sub is an example ARCHER2 submission script, dirac_lfric.sub an example DiRAC HPC submission script and lotus_lfric.sub is an example OpenMPI submission script for jasmin/lotus.
 
 
 
@@ -31,9 +31,17 @@ Access to [Met Office Science Repository Service](https://code.metoffice.gov.uk)
 
 `sudo` access if changes to the container are required. This can be on a different system from the LFRic build and run machine.
 
-`MPICH` compatible MPI on deployment system for use of local MPI libraries.
+either:
+
+* `MPICH` compatible MPI on deployment system for use of local MPI libraries.
+
+or
+
+* `OpenMPI` compatible MPI on deployment system. Note: as OpenMPI lacks general ABI, there's a possibility that the container will not use able to use local OpenMPI libraries and will have to use the (possibly slower) containerised versions.
 
 # Workflow
+
+This assumes the `MPICH` version of the container. To use the `OpenMPI` version, replace `lfric_env` below with `lfric_openmpi_env`.
 
 ## 1 Obtain container
 either:
@@ -95,7 +103,7 @@ export PATH=$ROSE_PICKER/bin:$PATH
 
 ## 7 Edit ifort.mk
 
-There are issues with the MPICH, the Intel compiler and Fortran08 C bindings, please see [https://code.metoffice.gov.uk/trac/lfric/ticket/2273](URL) for more information. Edit ifork.mk.
+There are issues with the MPI, the Intel compiler and Fortran08 C bindings, please see [https://code.metoffice.gov.uk/trac/lfric/ticket/2273](URL) for more information. Edit ifork.mk.
 ```
 vi trunk/infrastructure/build/fortran/ifort.mk
 ```
@@ -209,3 +217,12 @@ Discovering the missing dependencies is a process of trail and error where the e
 
 `/usr/lib/host` Is at the end of `LD_LIBRARY_PATH` in the container, so that this bind point can be used to provide any remaining system libraries dependencies in standard locations. In the above example, there are extra dependencies in `/usr/lib64`, so `
 /usr/lib64:/usr/lib/host` in `BIND_OPT` mounts this as `/usr/lib/host` inside the container, and therefore `/usr/lib64` is appended to the container's `LD_LIBRARY_PATH`.
+
+# OpenMPI
+
+An OpenMPI singularity definition file and example submission script are included. As OpenMPI lacks a general ABI there might be issues running with the local MPI libraries using the methodology described above. If there are issues, ensure that the OpenMPI version  used while building the container matches the version of the target machine.
+
+The supplied submission script for `lotus` works for both the containerised and local OpenMPI libraries using version 4.1.0 of OpenMPI.
+
+
+
