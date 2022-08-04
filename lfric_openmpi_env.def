@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: fedora:33
+From: fedora:35
 
 %files
 files/mk_arch_files_intel.sh /opt
@@ -8,6 +8,7 @@ files/keyword.cfg /opt
 files/mosrs-cache-password       /opt
 files/mosrs-check       /opt
 files/mosrs-setup-gpg-agent       /opt
+files/psyclone_new.cfg            /opt
 ####      files/container.tgz /opt
 
 %post
@@ -18,6 +19,7 @@ mv /opt/oneAPI.repo /etc/yum.repos.d
 
 #Update and install pre-built software stack. 
 dnf -y update
+dnf -y install ucx ucx-cma ucx-devel ucx-ib ucx-rdmacm libmnl numactl-libs libpsm2 librdmacm librdmacm-utils libibverbs ibutils kmod iproute libibverbs-utils
 dnf -y install  make cmake git python2 python3-devel python3 python3-pip automake wget subversion perl-URI perl-Text-Balanced perl-core perl-XML-Parser which file  zlib-devel libcurl-devel vim gcc gcc-c++ hostname nano procps psmisc rsync python3-sphinx csh bzip2
 dnf -y install intel-oneapi-compiler-fortran
 
@@ -45,9 +47,9 @@ HDF5=1.12.0
 NETCDF4=4.3.3.1
 NETCDF_FORTRAN=4.4.2
 NETCDF_CXX=4.2
-YAXT=0.9.0
+YAXT=0.9.3
 PFUNIT=3.2.9
-PSYCLONE=2.0.0
+PSYCLONE=2.1.0
 
 #fcm
 cd $BASE_DIR
@@ -146,7 +148,7 @@ export LIBS='-lnetcdff -lnetcdf -lhdf5_hl -lhdf5'
 
 #yaxt
 cd $BUILD_DIR
-wget https://www.dkrz.de/redmine/attachments/download/498/yaxt-$YAXT.tar.gz
+wget https://www.dkrz.de/redmine/attachments/download/520/yaxt-$YAXT.tar.gz
 tar -xzf yaxt-$YAXT.tar.gz
 cd $BUILD_DIR/yaxt-$YAXT
 ./configure --without-regard-for-quality --prefix=$INSTALL_DIR --with-idxtype=long CC=mpicc FC=mpif90 FPP="mpif90 -E"
@@ -158,7 +160,7 @@ make install
 #use mk_arch_files.sh 
 cd $BUILD_DIR
 export HDF5_DIR=$NETCDF_DIR 
-svn co http://forge.ipsl.jussieu.fr/ioserver/svn/XIOS/trunk@2169 XIOS
+svn co http://forge.ipsl.jussieu.fr/ioserver/svn/XIOS/trunk@2252 XIOS
 cd $BUILD_DIR/XIOS
 /opt/mk_arch_files_intel.sh INTEL_MPI
 mv *INTEL_MPI* arch
@@ -189,11 +191,11 @@ rm -fr $BUILD_DIR
 
 #Psyclone
 python3 -m pip install --no-cache-dir  --upgrade pip
-python3 -m pip install --upgrade setuptools
+#python3 -m pip install --upgrade setuptools
 python3 -m pip install Jinja2
 python3 -m pip install PSyclone==$PSYCLONE
 ln -s /usr/bin/python3 $INSTALL_DIR/bin/python
-
+mv /opt/psyclone_new.cfg /container/psyclone_new.cfg
 
 
 %environment
@@ -208,7 +210,7 @@ export CPPFLAGS="-I$INSTALL_DIR/include -I$NETCDF_DIR/include"
 export FFLAGS="-I$INSTALL_DIR/include -I$INSTALL_DIR/mod -I$NETCDF_DIR/include -I$OMPI_DIR/include -I$OMPI_DIR/lib"
 export LDFLAGS="-L$INSTALL_DIR/lib -L$NETCDF_DIR/lib"
 export PATH=$OMPI_DIR/bin:$NETCDF_DIR/bin:$INSTALL_DIR/bin:/opt/intel/oneapi/compiler/latest/linux/bin/intel64:$BASE_DIR/fcm/bin:$BASE_DIR/rose/bin:$BASE_DIR/clyc/bin:$PATH
-export PSYCLONE_CONFIG=/usr/local/share/psyclone/psyclone.cfg
+export PSYCLONE_CONFIG=/container/psyclone_new.cfg
 
 #Library path
 export LD_LIBRARY_PATH="$LOCAL_LD_LIBRARY_PATH:$OMPI_DIR/lib:$NETCDF_DIR/lib:$INSTALL_DIR/lib:/opt/intel/oneapi/compiler/latest/linux/compiler/lib/intel64_lin:$LD_LIBRARY_PATH:/usr/lib64:/usr/lib64/libibverbs:/usr/lib/host"
@@ -216,5 +218,7 @@ export LD_LIBRARY_PATH="$LOCAL_LD_LIBRARY_PATH:$OMPI_DIR/lib:$NETCDF_DIR/lib:$IN
 export FC=ifort
 export FPP="cpp -traditional-cpp"
 export LDMPI=mpif90
+
+%runscript
 #Unset CRAY program env
 unset PE_ENV

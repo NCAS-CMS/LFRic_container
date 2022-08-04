@@ -1,0 +1,22 @@
+#!/bin/sh
+#SBATCH --job-name=lfric
+#SBATCH --time=00:10:00
+#SBATCH --account=n02-cms
+#SBATCH --export=none
+#SBATCH --reservation=shortqos
+#SBATCH --partition=standard
+#SBATCH --qos=short
+
+#SBATCH --nodes=1
+#SBATCH --tasks-per-node=6
+
+export BASE_DIR=/loaction/of/base/dir
+export CONTAINER=/location/of/container/lfric_env.sif
+
+cd $BASE_DIR/trunk/gungho/example
+
+SHARED_ARGS="--distribution=block:block --hint=nomultithread"
+export LOCAL_LD_LIBRARY_PATH="/opt/cray/pe/mpich/default/ucx/gnu/9.1/lib-abi-mpich:/opt/cray/libfabric/1.11.0.4.71/lib64:/opt/cray/pe/pmi/default/lib:\$LD_LIBRARY_PATH"
+export BIND_OPT="-B /opt/cray,/usr/lib64:/usr/lib/host,/var/spool/slurmd,/mnt/lustre,/work/n02"
+
+srun $SHARED_ARGS singularity exec $BIND_OPT --env=LD_LIBRARY_PATH=$LOCAL_LD_LIBRARY_PATH $CONTAINER ../bin/gungho configuration.nml

@@ -118,6 +118,15 @@ FFLAGS_WARNINGS           = -warn all,noexternal -warn errors
 Note: `nano` is also available in the container environment.
 
 ## 8 Build executable
+
+### ARCHER2 Only
+`PE_ENV` needs to be `unset` to ensure the LFRic build system doesn't use the Cray compiler:
+
+```
+unset PE_ENV
+```
+
+
 ### gungho
 ```
 cd trunk/gungho
@@ -130,24 +139,39 @@ make build [-j nproc]
 ```
 The executables are built using the Intel compiler and associated software stack within the container and written to the local filesystem.
 ## 9 Run executable
+This is run insider the container on the command line and uses the MPI runtime libraries built into in the container.
 ### gungho
 ```
 cd example
 mpiexec -np 6 ../bin/gungho configuration.nml
 ```
-Note: This uses the MPI runtime libraries built into in the container.
+
 ### lfric_atm
+Single column:
 ```
 cd example
 ../bin/lfric_atm configuration.nml
 ```
-Note: This is the "single column" test version of lfric_atm. Running a global model requires the use of `rose-stem` which is currently beyond the scope of this document.
-
+Global. This requires an XIOS server:
+```
+cd example
+mpiexec -np 6 ../bin/lfric_atm ./configuration.nml : -np 1 /container/usr/bin/xios_server.exe
+```
 ## 10 Submit executable.
 
-If the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then  [MPICH ABI](https://www.mpich.org/abi/) can be used to access the local MPI and therefore the fast interconnects when running the executable via the container. See the section below for full details. Two example slurm gungho submission scripts are provided, one for ARCHER2 and one for DiRAC.
+MPI libraries on the local system can be used in conjunction with slurm.
+
+Four example slurm gungho submission scripts are provided, two for ARCHER2 and one for DiRAC and LOTUS.
+
+* `archer2_lfric_gungho.sub` ARCHER2 gungho submission without XIOS server
+* `archer2_lfric_atm.sub` ARCHER2 lfric_atm submission with XIOS server
+* `dirac_lfric.sub` DiRAC gungho submission without XIOS server
+* `lotus_lfric.sub` LOTUS gungho submission without XIOS serve. Uses OpenMPI.
 
 Note: These scripts are submitted on the command line as usual and not from within the container.
+
+In general, if the host machine has a MPICH based MPI (MPICH, Intel MPI, Cray MPT, MVAPICH2), then  [MPICH ABI](https://www.mpich.org/abi/) can be used to access the local MPI and therefore the fast interconnects when running the executable via the container. See the section below for full details. 
+
 
 
 
