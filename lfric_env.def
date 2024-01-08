@@ -19,9 +19,9 @@ mv /opt/oneAPI.repo /etc/yum.repos.d
 
 #Update and install pre-built software stack. 
 dnf -y update
-dnf -y install ucx ucx-cma ucx-devel ucx-ib ucx-rdmacm libmnl numactl-libs libpsm2 librdmacm librdmacm-utils libibverbs ibutils kmod iproute libibverbs-utils
+dnf -y install ucx ucx-cma ucx-devel ucx-ib ucx-rdmacm libmnl numactl-libs libpsm2 librdmacm librdmacm-utils libibverbs ibutils kmod iproute libibverbs-utils time gdb libxml2-devel jansson-devel glib2-devel libtool
 dnf -y install  make cmake git python2 python3-devel python3 python3-pip automake wget subversion perl-URI perl-Text-Balanced perl-core perl-XML-Parser which file  zlib-devel libcurl-devel vim gcc gcc-c++ hostname nano procps psmisc rsync python3-sphinx csh bzip2
-dnf -y install intel-oneapi-compiler-fortran-2022.1.0
+dnf --nogpgcheck -y install intel-oneapi-compiler-fortran-2022.1.0
 
 #Setup Intel
 . /opt/intel/oneapi/setvars.sh
@@ -44,9 +44,9 @@ ROSE_VERSION=2019.01.1
 
 MPICH=3.3.2
 HDF5=1.12.0
-NETCDF4=4.3.3.1
-NETCDF_FORTRAN=4.4.2
-NETCDF_CXX=4.2
+NETCDF4=4.9.2
+NETCDF_FORTRAN=4.6.0
+NETCDF_CXX=4.3.1
 YAXT=0.9.3
 PFUNIT=3.2.9
 PSYCLONE=2.3.1
@@ -116,9 +116,9 @@ make install
 
 #netcdf
 cd $BUILD_DIR
-wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-$NETCDF4.tar.gz
-tar -xzf netcdf-$NETCDF4.tar.gz
-cd $BUILD_DIR/netcdf-$NETCDF4
+wget https://downloads.unidata.ucar.edu/netcdf-c/$NETCDF4/netcdf-c-$NETCDF4.tar.gz
+tar -xzf netcdf-c-$NETCDF4.tar.gz
+cd $BUILD_DIR/netcdf-c-$NETCDF4
 CC=mpicc CXX=mpicxx FF=mpif90 FC=mpif90 ./configure --prefix=$NETCDF_DIR --disable-dap
 make -j$NCORES
 make install
@@ -127,7 +127,7 @@ export LIBS="-lnetcdf -lhdf5_hl -lhdf5 -ldl -lm -lz"
 
 #netcdf-fortran
 cd $BUILD_DIR
-wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-$NETCDF_FORTRAN.tar.gz
+wget https://downloads.unidata.ucar.edu/netcdf-fortran/$NETCDF_FORTRAN/netcdf-fortran-$NETCDF_FORTRAN.tar.gz
 tar -xzf netcdf-fortran-$NETCDF_FORTRAN.tar.gz
 cd $BUILD_DIR/netcdf-fortran-$NETCDF_FORTRAN
 CC=mpicc CXX=mpicxx FF=mpif90 FC=mpif90 ./configure --prefix=$NETCDF_DIR
@@ -136,13 +136,12 @@ make install
 
 #netcdf-cxx
 cd $BUILD_DIR
-wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-cxx-$NETCDF_CXX.tar.gz
-tar -xzf netcdf-cxx-$NETCDF_CXX.tar.gz
-cd $BUILD_DIR/netcdf-cxx-$NETCDF_CXX
+wget https://downloads.unidata.ucar.edu/netcdf-cxx/$NETCDF_CXX/netcdf-cxx4-$NETCDF_CXX.tar.gz
+tar -xzf netcdf-cxx4-$NETCDF_CXX.tar.gz
+cd $BUILD_DIR/netcdf-cxx4-$NETCDF_CXX
 CC=mpicc CXX=mpicxx FF=mpif90 FC=mpif90 ./configure --prefix=$NETCDF_DIR
 make -j$NCORES
 make install
-
 
 export LIBS='-lnetcdff -lnetcdf -lhdf5_hl -lhdf5'
 
